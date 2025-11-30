@@ -93,6 +93,10 @@ if ticker:
     info, news = get_stock_info(ticker)
 
     if data is not None and len(data) > 0:
+        # Clean data structure (Handle MultiIndex from yfinance)
+        if isinstance(data.columns, pd.MultiIndex):
+            data.columns = data.columns.get_level_values(0)
+
         # Calculate Indicators
         data['SMA'] = data['Close'].rolling(window=sma_period).mean()
         data['EMA'] = data['Close'].ewm(span=ema_period, adjust=False).mean()
