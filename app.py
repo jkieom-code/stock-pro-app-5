@@ -16,25 +16,40 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- Custom CSS for Professional UI ---
+# --- Custom CSS for Professional UI (Light Mode) ---
 st.markdown("""
     <style>
+    /* Main App Background */
     .stApp {
-        background-color: #0e1117;
-        color: #FAFAFA;
+        background-color: #FFFFFF;
+        color: #000000;
     }
+    
+    /* Metric Cards */
     .metric-card {
-        background-color: #262730;
-        border: 1px solid #464b5f;
+        background-color: #F0F2F6;
+        border: 1px solid #D1D5DB;
         padding: 20px;
         border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        color: #000000;
     }
+    
+    /* Buttons */
     .stButton>button {
         width: 100%;
         border-radius: 5px;
         font-weight: bold;
+        background-color: #000000; 
+        color: #FFFFFF;
     }
+    
+    /* Sidebar */
+    [data-testid="stSidebar"] {
+        background-color: #F8F9FA;
+        border-right: 1px solid #E5E7EB;
+    }
+    
     /* Hide Streamlit default menu */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
@@ -120,6 +135,7 @@ if ticker:
         volume = info.get('volume', 'N/A')
         pe_ratio = info.get('trailingPE', 'N/A')
 
+        # Custom Metric Card Styling (using standard st.metric for simplicity in light mode)
         with col1:
             st.metric(label="Current Price", value=f"${current_price:.2f}", delta=f"{price_change:.2f} ({pct_change:.2f}%)")
         with col2:
@@ -148,23 +164,24 @@ if ticker:
 
             # Overlays
             if show_sma:
-                fig.add_trace(go.Scatter(x=data.index, y=data['SMA'], line=dict(color='orange', width=1), name=f'SMA {sma_period}'))
+                fig.add_trace(go.Scatter(x=data.index, y=data['SMA'], line=dict(color='#FFA500', width=1), name=f'SMA {sma_period}'))
             if show_ema:
-                fig.add_trace(go.Scatter(x=data.index, y=data['EMA'], line=dict(color='cyan', width=1), name=f'EMA {ema_period}'))
+                fig.add_trace(go.Scatter(x=data.index, y=data['EMA'], line=dict(color='#00CED1', width=1), name=f'EMA {ema_period}'))
             if show_bb:
-                fig.add_trace(go.Scatter(x=data.index, y=data['BB_Upper'], line=dict(color='gray', width=1, dash='dash'), name='Upper BB'))
-                fig.add_trace(go.Scatter(x=data.index, y=data['BB_Lower'], line=dict(color='gray', width=1, dash='dash'), name='Lower BB'))
+                fig.add_trace(go.Scatter(x=data.index, y=data['BB_Upper'], line=dict(color='#808080', width=1, dash='dash'), name='Upper BB'))
+                fig.add_trace(go.Scatter(x=data.index, y=data['BB_Lower'], line=dict(color='#808080', width=1, dash='dash'), name='Lower BB'))
 
-            fig.update_layout(height=600, template="plotly_dark", title_text="")
+            # Update layout to White Template
+            fig.update_layout(height=600, template="plotly_white", title_text="", xaxis_rangeslider_visible=False)
             st.plotly_chart(fig, use_container_width=True)
 
             if show_rsi:
                 st.subheader("Relative Strength Index (RSI)")
                 fig_rsi = go.Figure()
-                fig_rsi.add_trace(go.Scatter(x=data.index, y=data['RSI'], name='RSI', line=dict(color='purple')))
+                fig_rsi.add_trace(go.Scatter(x=data.index, y=data['RSI'], name='RSI', line=dict(color='#800080')))
                 fig_rsi.add_hline(y=70, line_dash="dash", line_color="red")
                 fig_rsi.add_hline(y=30, line_dash="dash", line_color="green")
-                fig_rsi.update_layout(height=300, template="plotly_dark")
+                fig_rsi.update_layout(height=300, template="plotly_white")
                 st.plotly_chart(fig_rsi, use_container_width=True)
 
         # Tab 2: Prediction
@@ -188,14 +205,14 @@ if ticker:
             
             # Plotting Prediction
             fig_pred = go.Figure()
-            fig_pred.add_trace(go.Scatter(x=data.index, y=data['Close'], name='Historical Price'))
+            fig_pred.add_trace(go.Scatter(x=data.index, y=data['Close'], name='Historical Price', line=dict(color='blue')))
             
             # Create future dates
             last_date = data.index[-1]
             future_dates = [last_date + timedelta(days=x) for x in range(1, 31)]
             
             fig_pred.add_trace(go.Scatter(x=future_dates, y=future_pred, name='Predicted Trend', line=dict(color='red', dash='dot')))
-            fig_pred.update_layout(template="plotly_dark", title="30-Day Trend Forecast")
+            fig_pred.update_layout(template="plotly_white", title="30-Day Trend Forecast")
             st.plotly_chart(fig_pred, use_container_width=True)
 
             col_pred1, col_pred2 = st.columns(2)
@@ -207,42 +224,47 @@ if ticker:
         # Tab 3: News
         with tab3:
             st.subheader(f"Latest News for {ticker}")
+            
             if news:
                 for item in news[:10]:
-                    # Safe extraction of data with fallbacks
                     title = item.get('title', 'No Title')
+                    publisher = item.get('publisher', 'Unknown')
                     
-                    # Try 'link', 'url', or default to Yahoo Finance
+                    # Robust Link Extraction
                     link = item.get('link')
                     if not link:
                         link = item.get('url')
+                    if not link and 'clickThroughUrl' in item:
+                        link = item['clickThroughUrl'].get('url')
+                    
+                    # Fallback if no link found
                     if not link:
                         link = f"https://finance.yahoo.com/quote/{ticker}/news"
-                    
-                    publisher = item.get('publisher', 'Unknown')
-                    
-                    # Safe timestamp conversion
+
+                    # Safe timestamp extraction
                     try:
                         publish_time = item.get('providerPublishTime')
                         if publish_time:
                             time_str = datetime.fromtimestamp(publish_time).strftime('%Y-%m-%d %H:%M')
                         else:
                             time_str = "Recent"
-                    except Exception:
+                    except:
                         time_str = "Recent"
 
+                    # Card style updated for White Theme (Dark Text)
                     st.markdown(f"""
-                    <div style='background-color: #262730; padding: 15px; border-radius: 10px; margin-bottom: 10px;'>
-                        <a href="{link}" target="_blank" style="text-decoration: none; color: #4DA8DA; font-size: 18px; font-weight: bold;">
+                    <div style='background-color: #F0F2F6; padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #E5E7EB;'>
+                        <a href="{link}" target="_blank" style="text-decoration: none; color: #0066CC; font-size: 18px; font-weight: bold;">
                             {title}
                         </a>
-                        <p style='color: #BFBFBF; font-size: 14px; margin-top: 5px;'>
+                        <p style='color: #333333; font-size: 14px; margin-top: 5px;'>
                             Publisher: {publisher} | {time_str}
                         </p>
                     </div>
                     """, unsafe_allow_html=True)
             else:
-                st.write("No recent news found.")
+                st.warning("No specific news articles found. Visit Yahoo Finance for more.")
+                st.markdown(f"[Click here to search news for {ticker} on Yahoo Finance](https://finance.yahoo.com/quote/{ticker}/news)")
 
         # Tab 4: Fundamentals
         with tab4:
