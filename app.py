@@ -208,15 +208,36 @@ if ticker:
         with tab3:
             st.subheader(f"Latest News for {ticker}")
             if news:
-                for item in news[:10]: # Show top 10 news
+                for item in news[:10]:
+                    # Safe extraction of data with fallbacks
+                    title = item.get('title', 'No Title')
+                    
+                    # Try 'link', 'url', or default to Yahoo Finance
+                    link = item.get('link')
+                    if not link:
+                        link = item.get('url')
+                    if not link:
+                        link = f"https://finance.yahoo.com/quote/{ticker}/news"
+                    
+                    publisher = item.get('publisher', 'Unknown')
+                    
+                    # Safe timestamp conversion
+                    try:
+                        publish_time = item.get('providerPublishTime')
+                        if publish_time:
+                            time_str = datetime.fromtimestamp(publish_time).strftime('%Y-%m-%d %H:%M')
+                        else:
+                            time_str = "Recent"
+                    except Exception:
+                        time_str = "Recent"
+
                     st.markdown(f"""
                     <div style='background-color: #262730; padding: 15px; border-radius: 10px; margin-bottom: 10px;'>
-                        <a href="{item['link']}" target="_blank" style="text-decoration: none; color: #4DA8DA; font-size: 18px; font-weight: bold;">
-                            {item['title']}
+                        <a href="{link}" target="_blank" style="text-decoration: none; color: #4DA8DA; font-size: 18px; font-weight: bold;">
+                            {title}
                         </a>
                         <p style='color: #BFBFBF; font-size: 14px; margin-top: 5px;'>
-                            Publisher: {item['publisher']} | 
-                            {datetime.fromtimestamp(item['providerPublishTime']).strftime('%Y-%m-%d %H:%M')}
+                            Publisher: {publisher} | {time_str}
                         </p>
                     </div>
                     """, unsafe_allow_html=True)
@@ -229,16 +250,6 @@ if ticker:
             
             # Use columns to display key-value pairs nicely
             f_col1, f_col2 = st.columns(2)
-            
-            keys_to_display = {
-                "Sector": "sector",
-                "Industry": "industry",
-                "Full Time Employees": "fullTimeEmployees",
-                "City": "city",
-                "Country": "country",
-                "Website": "website",
-                "Summary": "longBusinessSummary"
-            }
             
             with f_col1:
                 st.write(f"**Sector:** {info.get('sector', 'N/A')}")
